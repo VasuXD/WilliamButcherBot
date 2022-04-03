@@ -2,7 +2,9 @@ from asyncio import get_event_loop, sleep
 
 from feedparser import parse
 from pyrogram import filters
-from pyrogram.errors import ChannelInvalid, ChannelPrivate
+from pyrogram.errors import (
+    ChannelInvalid, ChannelPrivate, InputUserDeactivated
+)
 from pyrogram.types import Message
 
 from wbb import RSS_DELAY, app, log
@@ -55,7 +57,7 @@ async def rss_worker():
                     chat, feed.parsed(), disable_web_page_preview=True
                 )
                 await update_rss_feed(chat, feed.title)
-            except (ChannelInvalid, ChannelPrivate):
+            except (ChannelInvalid, ChannelPrivate, InputUserDeactivated):
                 await remove_rss_feed(chat)
                 log.info(f"Removed RSS Feed from {chat} (Invalid Chat)")
             except Exception as e:
@@ -68,7 +70,7 @@ loop = get_event_loop()
 loop.create_task(rss_worker())
 
 
-@app.on_message(filters.command("add_feed"))
+@app.on_message(filters.command("add_feed") & ~filters.edited)
 @capture_err
 async def add_feed_func(_, m: Message):
     if len(m.command) != 2:
@@ -107,7 +109,7 @@ async def add_feed_func(_, m: Message):
     await add_rss_feed(chat_id, parsed.url, feed.title)
 
 
-@app.on_message(filters.command("rm_feed"))
+@app.on_message(filters.command("rm_feed") & ~filters.edited)
 async def rm_feed_func(_, m: Message):
     if await is_rss_active(m.chat.id):
         await remove_rss_feed(m.chat.id)

@@ -9,7 +9,7 @@ __HELP__ = """
 /telegraph [Page name]: Paste styled text on telegraph."""
 
 
-@app.on_message(filters.command("telegraph"))
+@app.on_message(filters.command("telegraph") & ~filters.edited)
 @capture_err
 async def paste(_, message: Message):
     reply = message.reply_to_message

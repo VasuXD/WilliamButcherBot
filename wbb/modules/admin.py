@@ -61,6 +61,7 @@ __HELP__ = """
 /kick - Kick A User
 /dkick - Delete the replied message kicking its sender
 /purge - Purge Messages
+/purge [n] - Purge "n" number of messages from replied message
 /del - Delete Replied Message
 /promote - Promote A Member
 /fullpromote - Promote A Member With All Rights
@@ -172,17 +173,26 @@ async def admin_cache_func(_, cmu: ChatMemberUpdated):
 @app.on_message(filters.command("purge") & ~filters.edited & ~filters.private)
 @adminsOnly("can_delete_messages")
 async def purgeFunc(_, message: Message):
+    repliedmsg = message.reply_to_message
     await message.delete()
 
-    if not message.reply_to_message:
+    if not repliedmsg:
         return await message.reply_text("Reply to a message to purge from.")
+
+    cmd = message.command
+    if len(cmd) > 1 and cmd[1].isdigit():
+        purge_to = repliedmsg.message_id + int(cmd[1])
+        if purge_to > message.message_id:
+            purge_to = message.message_id
+    else:
+        purge_to = message.message_id   
 
     chat_id = message.chat.id
     message_ids = []
 
     for message_id in range(
-            message.reply_to_message.message_id,
-            message.message_id,
+            repliedmsg.message_id,
+            purge_to,
     ):
         message_ids.append(message_id)
 
@@ -520,7 +530,11 @@ async def unmute(_, message: Message):
 # Ban deleted accounts
 
 
-@app.on_message(filters.command("ban_ghosts") & ~filters.private)
+@app.on_message(
+    filters.command("ban_ghosts")
+    & ~filters.private
+    & ~filters.edited
+)
 @adminsOnly("can_restrict_members")
 async def ban_deleted_accounts(_, message: Message):
     chat_id = message.chat.id
